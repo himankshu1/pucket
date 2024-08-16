@@ -6,8 +6,8 @@ import { ApiSuccess } from "../utils/ApiSuccess.js";
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
-    const access_token = user.generateAccessToken();
-    const refresh_token = user.generateRefreshToken();
+    const access_token = await user.generateAccessToken();
+    const refresh_token = await user.generateRefreshToken();
 
     // saving the refresh token into the db
     user.refreshToken = await refresh_token;
@@ -144,4 +144,30 @@ export async function loginUser(req, res) {
         "user signed in successfully"
       )
     );
+}
+
+//* user logout method
+export async function logoutUser(req, res) {
+  const loggedOutUser = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $unset: {
+        refreshToken: "",
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiSuccess(200, loggedOutUser, "user logged out successfully"));
 }
