@@ -28,10 +28,14 @@ const userSchema = new Schema(
     },
     userType: {
       type: String,
+      required: [
+        true,
+        "user type is required. Please choose 'buyer' or 'seller'",
+      ],
       enum: ["buyer", "seller"],
     },
     uploadedImages: [String],
-    accessToken: {
+    refreshToken: {
       type: String,
     },
   },
@@ -43,7 +47,7 @@ userSchema.pre("save", async function (next) {
   try {
     if (this.isModified("password")) {
       const salt = await bcrypt.genSalt(10);
-      this.password = bcrypt.hash(this.password, salt);
+      this.password = await bcrypt.hash(this.password, salt);
     }
     next();
   } catch (error) {
@@ -80,8 +84,6 @@ userSchema.methods.generateRefreshToken = async function () {
   return jwt.sign(
     {
       _id: this._id,
-      username: this.username,
-      email: this.email,
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
