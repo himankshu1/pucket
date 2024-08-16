@@ -173,7 +173,7 @@ export async function logoutUser(req, res) {
     .json(new ApiSuccess(200, loggedOutUser, "user logged out successfully"));
 }
 
-//* regenerate access token when expired (but refresh token is saved in the cookies)
+//* regenerate access & refresh token when access token is expired (refresh token is saved in the cookies)
 export async function regenerateAccessToken(req, res) {
   try {
     // get refresh token. handle if not received
