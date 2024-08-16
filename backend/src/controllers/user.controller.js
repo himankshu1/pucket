@@ -1,6 +1,7 @@
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiSuccess } from "../utils/ApiSuccess.js";
+import jwt from "jsonwebtoken";
 
 //* generating access and refresh token whenever needed
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -170,4 +171,68 @@ export async function logoutUser(req, res) {
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
     .json(new ApiSuccess(200, loggedOutUser, "user logged out successfully"));
+}
+
+//* regenerate access token when expired (but refresh token is saved in the cookies)
+export async function regenerateAccessToken(req, res) {
+  try {
+    // get refresh token. handle if not received
+    const incomingRefreshToken =
+      req.cookies?.refreshToken || req.body.refreshToken;
+
+    if (!incomingRefreshToken) {
+      return res.status(400).json(new ApiError(400, "Unauthorized request"));
+    }
+
+    // decrypting the token with jwt and finding the user in db
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById(decodedToken?._id);
+    if (!user) {
+      return res.status(400).json(new ApiError(400, "Invalid token"));
+    }
+
+    // comparing the incoming refresh token from client and in the db
+    if (incomingRefreshToken !== user?.refreshToken) {
+      // user is not verified
+      res
+        .status(400)
+        .json(new ApiError(400, "Refresh token not matched or expired"));
+    }
+
+    // generating new access & refresh tokens
+    const { access_token, refresh_token } =
+      await user.generateAccessAndRefreshTokens(user._id);
+
+    // defining cookies options
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    // sending response to client
+    return res
+      .status(200)
+      .cookie("accessToken", access_token, options)
+      .cookie("refreshToken", refresh_token, options)
+      .json(
+        new ApiSuccess(
+          200,
+          {
+            access_token,
+            refresh_token,
+          },
+          "regenerated access token successfully"
+        )
+      );
+  } catch (error) {
+    // catch exception
+    throw new ApiError(
+      500,
+      error?.message || "Error while generating access token"
+    );
+  }
 }
