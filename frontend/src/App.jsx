@@ -4,6 +4,8 @@ import LoginSignup from "./components/pages/LoginSignup";
 import BuyerDashboard from "./components/pages/BuyerDashboard";
 import SellerDashboard from "./components/pages/SellerDashboard";
 import RootLayout from "./layouts/RootLayout";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const router = createBrowserRouter([
   {
@@ -34,6 +36,7 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
+      <ToastContainer position="top-right" />
     </>
   );
 }

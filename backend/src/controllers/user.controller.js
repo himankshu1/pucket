@@ -23,6 +23,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 //* user register method
+//TODO: Need to handle the username field if already exists
 export async function registerUser(req, res) {
   // get fields from request body
   const { username, fullName, email, password, userType } = req.body;
@@ -47,7 +48,9 @@ export async function registerUser(req, res) {
   });
 
   if (already_existed_user) {
-    res.json(new ApiError(409, "User with username or email already exists"));
+    return res.json(
+      new ApiError(409, "User with username or email already exists")
+    );
   }
 
   // create user in db
@@ -89,19 +92,15 @@ export async function registerUser(req, res) {
 
 //* user login method
 export async function loginUser(req, res) {
-  const { username, email, password } = req.body;
+  const { email, password } = req.body;
 
   // validating the fields
-  if (!username && !email) {
-    return res
-      .status(400)
-      .json(new ApiError(400, "username or email and password is required"));
+  if (!email && !password) {
+    return res.status(400).json(new ApiError(400, "all fields are required"));
   }
 
   // checking if user exists with username or password
-  const isUserFound = await User.findOne({
-    $or: [{ username }, { email }],
-  });
+  const isUserFound = await User.findOne({ email });
 
   if (!isUserFound) {
     return res.status(404).json(new ApiError(404, "user not found"));
@@ -112,7 +111,7 @@ export async function loginUser(req, res) {
   if (!isPasswordCorrect) {
     return res
       .status(400)
-      .json(new ApiError(400, "email/username or password is not correct"));
+      .json(new ApiError(400, "email or password is not correct"));
   }
 
   // generating access and refresh tokens
